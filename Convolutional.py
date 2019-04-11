@@ -1,13 +1,14 @@
 import tensorflow as tf
 
 import numpy as np
-import scipy.ndimage as scn
+import imageio as ima
+import visvis as vv
 import glob
 
 
 #Load Data
 trainDataPath = "./data/seg_train/"
-testDataPath = "/data/seg_test/"
+testDataPath = "./data/seg_test/"
 
 labels = ["buildings","forest","glacier","mountain","sea","street"]
 trainData = {}
@@ -19,7 +20,7 @@ for label in labels:
     trainFiles = glob.glob(trainDatap + "/*.jpg")
     
     for trainFile in trainFiles:
-        trainData[label].append(scn.imread(trainFile, mode = 'L')/256)
+        trainData[label].append(ima.imread(trainFile)/256)
     print(label)
     print(len(trainData[label]))
     
@@ -28,11 +29,10 @@ for label in labels:
     testFiles = glob.glob(testDatap + "/*.jpg")    
     
     for testFile in testFiles:
-        testData[label].append(scn.imread(testFile, mode = 'L')/256)
+        testData[label].append(ima.imread(testFile)/256)
     print(label)
     print(len(testData[label]))
-    
-    
+
 def convolutionStep(filterData, weights, bias):
     data = np.dot(filterData, weights.T)
     output = np.sum(data) + float(bias)
