@@ -1,90 +1,62 @@
 import tensorflow as tf
-import keras
 
 import numpy as np
-import scipy.ndimage as scn
+import imageio as ima
+import visvis as vv
 import glob
-
+import random
 
 #Load Data
 trainDataPath = "./data/seg_train/"
-testDataPath = "/data/seg_test/"
+testDataPath = "./data/seg_test/"
 
 labels = ["buildings","forest","glacier","mountain","sea","street"]
-trainData = {}
-testData = {}
 
-for label in labels:
-    trainData.update({label:[]})
-    trainDatap = trainDataPath + label
-    trainFiles = glob.glob(trainDatap + "/*.jpg")
+def train(data):
+    labels = []
+    features = []
+
+    random.shuffle(data)
+    for dataPoint in data:
+        labels.append(dataPoint[0])
+        features.append(dataPoint[1])
+    #print(key)
+    #print(data[key])
+    print(labels)
+
     
-    for trainFile in trainFiles:
-        trainData[label].append(scn.imread(trainFile, mode = 'L')/256)
-    print(trainData[:label])
-    
-    testData.update({label:[]})
-    testDatap = testDataPath + label
-    testFiles = glob.glob(testDatap + "/*.jpg")    
-    
-    for testFile in testFiles:
-        testData[label].append(scn.imread(testFile, mode = 'L')/256)
-    print(label)
-    print(len(testData[label]))
-    
-for images in trainData:    
-    inputLayer = np.array()
-    outputs = np.array()
-    
-for tests in testData:
-    imageData = np.array()
-    labelData = np.array()
 
-#CNN Model Architecture:
-model = tf.keras.models.Sequential()
+def convolutionStep(filterData, weights, bias):
+    data = np.dot(filterData, weights.T)
+    output = np.sum(data) + float(bias)
+    return output
 
-#First Layer:
-conv_1 = keras.layers.Conv2D(
-        36, kernel_size = (5, 5),
-        strides = (2, 2), padding = 'valid',
-        activation = 'relu', bias_initializer = 'zeros',
-        input_shape = (150, 150, 1))
+def pads(X, size):
+    pad = np.pad(X, ((0,0), (size,size), (size,size)), mode = 'constant', constant_values = (0,0))
+    return pads
 
-pool_1 = keras.layers.MaxPooling2D(2, 2)
+def forwardPropagation(data, weights):
+    w1, w2 = initializeWeights()
 
-model.add([conv_1], [pool_1])
+def main():
+    trainData = []
+    testData = {}
+    for label in labels:
+        trainDatap = trainDataPath + label
+        trainFiles = glob.glob(trainDatap + "/*.jpg")
 
-#Second Layer:
-conv_2 = keras.layers.Conv2D(
-        72, kernel_size = (5, 5),
-        strides = (2, 2), padding = 'valid',
-        activation = 'relu', bias_initializer = 'zeros')
+        for trainFile in trainFiles:
+            picture = [label,ima.imread(trainFile)/256]
+            trainData.append(picture)
+        print(label)
+        print(len(trainData))
 
-pool_2 = keras.layers.MaxPool2D(2, 2)
+        testData.update({label:[]})
+        testDatap = testDataPath + label
+        testFiles = glob.glob(testDatap + "/*.jpg")
 
-model.add([conv_2], [pool_2])
+        for testFile in testFiles:
+            testData[label].append(ima.imread(testFile)/256)
 
-#Third Layer:
-conv_3 = keras.layers.Conv2D(
-        72, kernel_size = (5, 5),
-        strides = (2, 2), padding = 'valid',
-        activation = 'relu', bias_initializer = 'zeros')
-
-pool_3 = keras.layers.MaxPool2D(2, 2)
-
-model.add([conv_3], [pool_3])
-
-#Fully Connected Layers:
-fConnect = keras.layers.Flatten()
-fConnect_4 = keras.layers.Dense(300, activation = 'relu')
-fConnect_5 = keras.layers.Dense(6, activation = 'softmax')
-
-model.add([fConnect], [fConnect_4], [fConnect_5])
-
-
-#Run Model:
-model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-model.summary()
-model.fit(inputLayer, outputs, epochs = 5)
-
-test_accuracy = model.evaulate(imageData, labelData)
+    train(trainData)
+main()
