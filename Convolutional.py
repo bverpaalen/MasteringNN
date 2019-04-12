@@ -1,4 +1,5 @@
 import tensorflow as tf
+import keras
 
 import numpy as np
 import scipy.ndimage as scn
@@ -20,8 +21,7 @@ for label in labels:
     
     for trainFile in trainFiles:
         trainData[label].append(scn.imread(trainFile, mode = 'L')/256)
-    print(label)
-    print(len(trainData[label]))
+    print(trainData[:label])
     
     testData.update({label:[]})
     testDatap = testDataPath + label
@@ -32,15 +32,59 @@ for label in labels:
     print(label)
     print(len(testData[label]))
     
+for images in trainData:    
+    inputLayer = np.array()
+    outputs = np.array()
     
-def convolutionStep(filterData, weights, bias):
-    data = np.dot(filterData, weights.T)
-    output = np.sum(data) + float(bias)
-    return output
+for tests in testData:
+    imageData = np.array()
+    labelData = np.array()
 
-def pads(X, size):
-    pad = np.pad(X, ((0,0), (size,size), (size,size)), mode = 'constant', constant_values = (0,0))
-    return pads
+#CNN Model Architecture:
+model = tf.keras.models.Sequential()
 
-def forwardPropagation(data, weights):
-    w1, w2 = initializeWeights()
+#First Layer:
+conv_1 = keras.layers.Conv2D(
+        36, kernel_size = (5, 5),
+        strides = (2, 2), padding = 'valid',
+        activation = 'relu', bias_initializer = 'zeros',
+        input_shape = (150, 150, 1))
+
+pool_1 = keras.layers.MaxPooling2D(2, 2)
+
+model.add([conv_1], [pool_1])
+
+#Second Layer:
+conv_2 = keras.layers.Conv2D(
+        72, kernel_size = (5, 5),
+        strides = (2, 2), padding = 'valid',
+        activation = 'relu', bias_initializer = 'zeros')
+
+pool_2 = keras.layers.MaxPool2D(2, 2)
+
+model.add([conv_2], [pool_2])
+
+#Third Layer:
+conv_3 = keras.layers.Conv2D(
+        72, kernel_size = (5, 5),
+        strides = (2, 2), padding = 'valid',
+        activation = 'relu', bias_initializer = 'zeros')
+
+pool_3 = keras.layers.MaxPool2D(2, 2)
+
+model.add([conv_3], [pool_3])
+
+#Fully Connected Layers:
+fConnect = keras.layers.Flatten()
+fConnect_4 = keras.layers.Dense(300, activation = 'relu')
+fConnect_5 = keras.layers.Dense(6, activation = 'softmax')
+
+model.add([fConnect], [fConnect_4], [fConnect_5])
+
+
+#Run Model:
+model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
+model.summary()
+model.fit(inputLayer, outputs, epochs = 5)
+
+test_accuracy = model.evaulate(imageData, labelData)
