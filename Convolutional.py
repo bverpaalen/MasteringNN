@@ -30,15 +30,18 @@ def cnn_model(features,labels,mode):
     size = 150
     pool = None
 
-    print(labels)
-    try:    
-        input_layer = tf.reshape(features["image"],[-1,28,28,1])
-    except:
-        print()
-        print("reshape went wrong")
-        #features.print()
-        print()
-        input_layer = tf.reshape([float(0)]*28*28,[-1,28,28,1])
+    #print(features["image"])
+    #print(labels)
+    #print(mode)
+    #exit(0)
+    #try:    
+    input_layer = tf.reshape(features["image"],[-1,150,150,1])
+    #except:
+    #    print()
+    #    print("reshape went wrong")
+    #    #features.print()
+    #    print()
+    #    input_layer = tf.reshape([float(0)]*28*28,[-1,28,28,1])
 
     #print(features["image"])
 
@@ -69,7 +72,7 @@ def cnn_model(features,labels,mode):
                  strides=poolInputs["strides"])
      #Dense Layer
     tf.shape(pool)
-    pool_flat = tf.reshape(pool,[-1,7*7*64])
+    pool_flat = tf.reshape(pool,[-1,37*37*64])
      
     dense = tf.layers.dense(inputs=pool_flat, units=1024, activation=tf.nn.relu)
     dropout = tf.layers.dropout(inputs=dense, rate=0.4, training=mode == tf.estimator.ModeKeys.TRAIN)
@@ -105,15 +108,18 @@ def cnn_model(features,labels,mode):
       mode=mode, loss=loss, eval_metric_ops=eval_metric_ops)
 
 def randomizeData(data):
-    labels = []
+    tLabels = []
     features = []
 
     random.shuffle(data)
     for dataPoint in data:
-        labels.append(dataPoint[0])
-        features.append(dataPoint[1])
+        feature = np.array((dataPoint[1])/256).flatten().tolist()
+        if len(feature) != (150 * 150):
+            continue
+        tLabels.append(labels.index(dataPoint[0]))
+        features.append((np.array(dataPoint[1])/256).flatten().tolist())
 
-    return np.array(labels),np.array(features)
+    return tLabels,features
     
 def LoadData():
     trainData = []
@@ -137,14 +143,32 @@ def LoadData():
 def main(argv):
     testData,trainData = LoadData()
 
-    #testLabels,testFeatures = randomizeData(testData)    
-    #trainLabels,trainFeatures = randomizeData(trainData)
+    testLabels,testFeatures = randomizeData(testData)    
+    trainLabels,trainFeatures = randomizeData(trainData)
 
-    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    trainFeatures = mnist.train.images  # Returns np.array
-    trainLabels = np.asarray(mnist.train.labels, dtype=np.int32)
-    testFeatures = mnist.test.images  # Returns np.array
-    testLabels = np.asarray(mnist.test.labels, dtype=np.int32)    
+    print(len(trainFeatures))
+    print(len(trainFeatures[0]))
+    print(type(trainFeatures))
+    print(type(trainFeatures[0][0]))
+    
+    standLen = len(trainFeatures[0])
+    for feature in trainFeatures:
+        if len(feature) != standLen:
+            print("Something broke ma boi")
+            print(len(feature))
+               
+
+    trainFeatures = np.asarray(trainFeatures,np.float32)
+
+    print(len(trainFeatures))    
+    
+    #mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+    #trainFeatures = mnist.train.images  # Returns np.array
+    #trainLabels = np.asarray(mnist.train.labels, dtype=np.int32)
+    #testFeatures = mnist.test.images  # Returns np.array
+    #testLabels = np.asarray(mnist.test.labels, dtype=np.int32)    
+    
+    #exit(0)
 
     classifier = tf.estimator.Estimator(model_fn=cnn_model,model_dir="./cnn_model")
 
@@ -154,14 +178,15 @@ def main(argv):
 
     #vv.imwrite("test.png",trainFeatures[0])
 
-    print(trainFeatures[0])
-    print(len(trainFeatures[0]))
-    print(len(trainFeatures))
-    train_input = tf.estimator.inputs.numpy_input_fn(x={"image":trainFeatures},y=trainLabels,num_epochs=None,shuffle=True)
+    print(trainFeatures)
+    train_input = tf.estimator.inputs.numpy_input_fn(x={"image":np.asarray(trainFeatures,np.float64)},y=np.array(trainLabels),num_epochs=None,shuffle=False)
+    
+    print(train_input)
+    #exit(0)
 
     classifier.train(
         input_fn=train_input,
-        steps=200000,#2* 10**4,
+        steps=20000,#2* 10**4,
         hooks=[logging_hook])
 
     eval_input_fn = tf.estimator.inputs.numpy_input_fn(
