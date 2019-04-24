@@ -1,7 +1,7 @@
 import os
 
 os.environ["CUDA_DEVICE_ORDER"]="PCI_BUS_ID"
-os.environ["CUDA_VISIBLE_DEVICES"] = "1"
+os.environ["CUDA_VISIBLE_DEVICES"] = "2"
 
 import tensorflow as tf
 import keras as ks
@@ -20,10 +20,10 @@ import random
 trainDataPath = "./data/seg_train/"
 testDataPath = "./data/seg_test/"
 
-labels = ["buildings"]#,"forest","glacier","mountain","sea","street"]
+labels = ["buildings","forest","glacier","mountain","sea","street"]
 
-inputLayers = [{"conv":{"filters":32,"kernel_size":["5","5"],"padding":"same","activation":tf.nn.relu},"pool":{"pool_size":2,"strides":2}},{
-"conv":{"filters":64,"kernel_size":["5","5"],"padding":"same","activation":tf.nn.relu},"pool":{"pool_size":2,"strides":2}}
+inputLayers = [{"conv":{"filters":32,"kernel_size":["5","5"],"padding":"same","activation":tf.nn.relu},"pool":{"pool_size":[2,2],"strides":2}},{
+"conv":{"filters":64,"kernel_size":["5","5"],"padding":"same","activation":tf.nn.relu},"pool":{"pool_size":[2,2],"strides":2}}
                ]
 
 def cnn_model(features,labels,mode):    
@@ -35,6 +35,7 @@ def cnn_model(features,labels,mode):
     #print(mode)
     #exit(0)
     #try:    
+    
     input_layer = tf.reshape(features["image"],[-1,150,150,1])
     #except:
     #    print()
@@ -45,6 +46,7 @@ def cnn_model(features,labels,mode):
 
     #print(features["image"])
 
+    print(mode)
     for i in range(len(inputLayers)):
         print(i)
         print()
@@ -59,8 +61,10 @@ def cnn_model(features,labels,mode):
         if pool == None:
             print("EMPTY POOL")
             print(i)
+        print(type(tf.cast(pool,tf.double)))
+        #exit(0)
         conv = tf.layers.conv2d(
-                 inputs=pool,
+                 inputs=tf.cast(pool,tf.double),
                  filters=convInputs["filters"],
                  kernel_size=convInputs["kernel_size"],
                  padding=convInputs["padding"],
@@ -119,7 +123,7 @@ def randomizeData(data):
         tLabels.append(labels.index(dataPoint[0]))
         features.append((np.array(dataPoint[1])/256).flatten().tolist())
 
-    return tLabels,features
+    return np.array(tLabels),np.array(features)
     
 def LoadData():
     trainData = []
@@ -136,7 +140,7 @@ def LoadData():
         testFiles = glob.glob(testDatap + "/*.jpg")
 
         for testFile in testFiles:
-            picture = [label,ima.imread(testFile)]
+            picture = [label,cv2.cvtColor(ima.imread(testFile),cv2.COLOR_BGR2GRAY)]
             testData.append(picture)
     return testData,trainData
 
@@ -146,28 +150,29 @@ def main(argv):
     testLabels,testFeatures = randomizeData(testData)    
     trainLabels,trainFeatures = randomizeData(trainData)
 
-    print(len(trainFeatures))
-    print(len(trainFeatures[0]))
-    print(type(trainFeatures))
-    print(type(trainFeatures[0][0]))
+    #print(len(trainFeatures))
+    #print(len(trainFeatures[0]))
+    #print(type(trainFeatures))
+    #print(type(trainFeatures[0][0]))
     
-    standLen = len(trainFeatures[0])
-    for feature in trainFeatures:
-        if len(feature) != standLen:
-            print("Something broke ma boi")
-            print(len(feature))
+    #standLen = len(trainFeatures[0])
+    #for feature in trainFeatures:
+    #    if len(feature) != standLen:
+    #        print("Something broke ma boi")
+    #        print(len(feature))
                
 
-    trainFeatures = np.asarray(trainFeatures,np.float32)
+    #trainFeatures = np.asarray(trainFeatures,np.float32)
 
-    print(len(trainFeatures))    
-    
-    #mnist = tf.contrib.learn.datasets.load_dataset("mnist")
-    #trainFeatures = mnist.train.images  # Returns np.array
-    #trainLabels = np.asarray(mnist.train.labels, dtype=np.int32)
-    #testFeatures = mnist.test.images  # Returns np.array
-    #testLabels = np.asarray(mnist.test.labels, dtype=np.int32)    
-    
+    #print(len(trainFeatures))    
+    """
+    mnist = tf.contrib.learn.datasets.load_dataset("mnist")
+    trainFeatures = mnist.train.images  # Returns np.array
+    trainLabels = np.asarray(mnist.train.labels, dtype=np.int32)
+    testFeatures = mnist.test.images  # Returns np.array
+    testLabels = np.asarray(mnist.test.labels, dtype=np.int32)    
+    """
+    #trainFeatures = np.asarray(trainFeatures,np.float32)
     #exit(0)
 
     classifier = tf.estimator.Estimator(model_fn=cnn_model,model_dir="./cnn_model")
@@ -178,11 +183,9 @@ def main(argv):
 
     #vv.imwrite("test.png",trainFeatures[0])
 
-    print(trainFeatures)
-    train_input = tf.estimator.inputs.numpy_input_fn(x={"image":np.asarray(trainFeatures,np.float64)},y=np.array(trainLabels),num_epochs=None,shuffle=False)
+    train_input = tf.estimator.inputs.numpy_input_fn(x={"image":np.float32(trainFeatures)},y=trainLabels,batch_size=100,num_epochs=None,shuffle=False)
     
-    print(train_input)
-    #exit(0)
+    print(type(train_input))
 
     classifier.train(
         input_fn=train_input,
